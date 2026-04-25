@@ -1,0 +1,293 @@
+
+0 — Project scaffold & shared styles
+Create a local-first browser tool suite. No backend, no signup, no tracking.
+Project structure (all files in one flat folder):
+  styles.css          — site-wide base (dark theme CSS variables, card, container, grid, footer)
+  image-resize.css    — extended component library shared across all pages:
+                         drop-zone, kb-presets, loader+spinner, preview-wrap,
+                         resize-hero header, format-mode tab bar, button styles,
+                         status tones (info/success/warn/error via data-tone attribute)
+  site-sw.js          — service worker: precaches shell assets, cache-first for CDN
+                         models (MediaPipe, heic2any, jsPDF, fast-xml-parser)
+Design:
+  - Dark theme — background #0f172a, card #1e293b, elevated #273549,
+    accent #6366f1, border rgba(148,163,184,0.12)
+  - CSS custom properties for all colours, radius, spacing
+  - Fully responsive (single-column < 768 px, side-by-side >= 768 px)
+  - Accessible: ARIA labels, keyboard nav, focus rings, aria-live regions
+  - Each page adds a `page-*` body class and a hero header with eyebrow + H1 + lead copy
+  - Footer: Privacy · About · Contact links
+  - "Other tools" link-grid card at the bottom of every page
+Deliverables: styles.css, image-resize.css, site-sw.js only.
+1 — Image resize by file size
+Build image-resize.html (+ app.js + worker.js).
+Feature: resize any image so its JPEG output lands at a user-specified
+kilobyte target. All processing is local — no upload.
+Supported input: JPG, PNG, WebP, HEIC/HEIF (via heic2any CDN shim).
+UI elements:
+  - Drag-and-drop zone with SVG upload icon; click to browse
+  - Visually-hidden <input type=file>; show selected filename in a .file-row
+  - KB target <input type=number> with placeholder "e.g. 200"
+  - Quick-preset buttons for 50 / 100 / 200 / 500 KB
+  - "Resize" primary button, "Reset" secondary button
+  - Loader: inline spinner + text ("Resizing…")
+  - Preview column: shows output image; placeholder silhouette when empty
+  - Status <p> with data-tone=info/success/warn/error
+  - "Other tools" card linking to the other pages in the suite
+worker.js (Web Worker, plain script):
+  - Receives { imageBitmap, targetKB, quality }
+  - Binary-search JPEG quality (8 iterations, lo=0.4 hi=0.97) to hit targetKB
+  - Returns { blob, sizeBytes, width, height }
+app.js (ES module, type=module):
+  - initPage() wires all events
+  - decodeAnyImage(file): tries createImageBitmap first; HEIC fallback via heic2any
+  - applyExifOrientation(bitmap, orientation): transform matrix shim
+  - updatePreview(blob): draw on <canvas>, show dimensions + KB
+  - setupKbPresets(): click handler sets the number input
+  - setStatus(msg, type): updates #status data-tone
+  - toggleLoading(bool): show/hide spinner, disable primary button
+Use: heic2any@0.0.3 from unpkg (UMD global, loaded in <head>).
+2 — Compress image (compress-image.html)
+Build compress-image.html. Reuse app.js and worker.js from the resize tool.
+Difference from resize: the user sets a quality slider (0–100) instead of
+a KB target. The slider is labelled "Quality" with a live numeric readout.
+Output format selector: Original / JPEG / WebP / PNG.
+The same drop-zone, preview, status, and loader components are reused from
+image-resize.css.
+New options panel items:
+  - <input type=range id=quality min=0 max=100 value=85>
+  - <output id=qualityVal>85</output> synced in real time
+  - <select id=outputFormat> with four options
+Worker: same binary but receives { imageBitmap, quality, format } and returns
+{blob, sizeBytes, width, height}. No binary search.
+Page shares the page-resize body class for styling.
+3 — Images & documents to PDF
+Build convert-to-pdf.html (+ images-to-pdf.js). No backend.
+Supported inputs (multiple files at once):
+  Images: JPG, PNG, WebP, HEIC
+  Documents: .txt plain text, .docx (via mammoth.js lazy-loaded from CDN)
+UI:
+  - Multi-file drop zone (accept="image/*,.heic,.heif,.txt,.docx")
+  - File list with per-file status icons (✓ image / ✓ doc / ✗ unsupported)
+  - "Image quality in PDF" range slider 0.5–1.0, default 0.85
+  - "Convert to PDF" primary button, "Clear all" secondary
+  - Loader spinner + status message
+  - Auto-download of PDF on success
+PDF logic (images-to-pdf.js, ES module):
+  - Use jsPDF (UMD from unpkg) — window.jspdf.jsPDF
+  - For each image: decode → createImageBitmap → draw on OffscreenCanvas →
+    convertToBlob(JPEG, quality) → embed in PDF page sized to the image
+  - HEIC: decode via heic2any first
+  - .docx: await ensureMammoth() lazy-loads mammoth.browser.min.js from unpkg,
+    then extractRawText({arrayBuffer}) → add as a text page in jsPDF
+  - .txt: FileReader → text → jsPDF.splitTextToSize → addPage + text
+  - Pages sized to content; portrait A4 for documents, image native for photos
+Info card beneath the tool listing file-size limits and what formats are supported.
+Reuses page-resize body class and image-resize.css components.
+4 — XML / JSON / XSD format converter
+Build format-convert.html (+ format-convert.js + xsd-sample-xml.js).
+Three conversion modes (tab bar):
+  XML → JSON   |   JSON → XML   |   XSD → Sample XML
+Layout: two-panel editor (source left, result right) with a narrow options
+sidebar on the far right. Container max-width 1400 px (wider than other pages).
+Common editor features:
+  - <textarea> for source and result, monospace font
+  - Live stats: line count · character count · KB
+  - Drag-and-drop a file onto either textarea to load it
+  - Action bar: Convert (primary) · Format · Swap · Copy · Download · Clear
+  - Keyboard shortcut: Ctrl/Cmd+Enter triggers Convert
+  - Status bar with data-tone=info/success/warn/error
+XML→JSON options sidebar:
+  - "Ignore attributes" checkbox
+  - "Compact output" checkbox (no indent)
+JSON→XML options sidebar:
+  - "Root element name" text input (default "root")
+  - "Indent spaces" number input (default 2)
+XSD→Sample XML options sidebar:
+  - Root element <select> (populated by parsing the XSD)
+  - Badge showing "N global elements" or "N global complexTypes"
+  - "Include optional elements" checkbox (default on)
+  - "Max depth" number input (default 20)
+  - "Indent spaces" number input (default 2)
+  - "XML declaration" checkbox
+  - "Max occurrences samples" number input (default 1)
+  - "Generate all global elements" toggle checkbox
+    → when on: hide root selector, show Wrapper tag + Max elements inputs
+    → when off: show root selector, hide wrapper inputs
+Libraries: fast-xml-parser from esm.sh (ESM import in format-convert.js).
+xsd-sample-xml.js (ES module, exported):
+  listRootEntries(xsdString) → Array<{name, kind:"element"|"complexType", abstract}>
+  listRootElements(xsdString) → string[]  (backward-compat)
+  generateSampleXmlFromXsd(xsdString, options) → string
+  generateAllRootsXml(xsdString, options) → string
+Schema support in xsd-sample-xml.js:
+  - xs: / xsd: / no-prefix schemas via namespace-agnostic isEl()
+  - Global xs:element and (fallback) global xs:complexType roots
+  - xs:complexType: sequence, all, choice, group ref, attributeGroup ref
+  - xs:simpleContent extension/restriction (text node + attributes)
+  - xs:complexContent extension/restriction (inheritance chain)
+  - xs:simpleType: restriction (enumeration first value), list, union
+  - xs:attribute (required/optional/prohibited), use="required"
+  - xs:any → <!-- xs:any placeholder --> comment
+  - abstract="true" elements skipped (filtered from root list)
+  - Cycle detection via ctx.expanding Set keyed on tag name
+  - targetNamespace injected on root element as xmlns=""
+  - Built-in XSD types → realistic sample values
+  - External / XBRL / ISO 20022 type heuristics map (EXT_TYPE_SAMPLES)
+  - generateAllRootsXml wraps all roots in a configurable <WrapperTag>
+    with optional element cap and truncation comment
+5 — Passport photo maker
+Build passport-photo.html (+ passport-photo.js + passport-photo-worker.js
++ passport-photo-presets.js + passport-photo.css + passport-photo-sw.js).
+Purpose: browser-only passport photo generator. No upload. No server.
+Presets (passport-photo-presets.js, exported PRESETS map):
+  us_passport    — 2×2 in (50.8×50.8 mm), 300 DPI, white bg, 54–10240 KB
+  india_passport — 35×45 mm, 300 DPI, white bg, 10–1024 KB
+  india_visa     — 2×2 in square, 300 DPI, white bg, 10–300 KB
+  Each preset has: photo{widthMm, heightMm, dpi},
+  head{minRatio, maxRatio, targetRatio},
+  eyeLine{min/max/targetFromBottomRatio},
+  background{hex, tolerance},
+  fileSize{minKB, maxKB, preferredKB},
+  output{format, quality}
+UI layout (page-resize layout, two columns):
+  Left column (controls):
+    - Preset tab bar (US Passport / India Passport / India Visa)
+    - Preset summary line (dimensions, DPI, file-size range)
+    - Drop zone for photo (JPG/PNG/WebP/HEIC, max 25 MB)
+    - File name display row
+    - Options section:
+        "Replace background" checkbox + hint
+        Background colour: <input type=color> + <select> preset
+        "Auto-crop using face detection" checkbox + hint
+        Target file size KB (optional number input + hint)
+    - Primary "Generate photo" button + "Start over" secondary
+    - Loader (spinner + text), progress bar, status paragraph
+    - Compliance checklist (aria-live, hidden until generated)
+  Right column (preview):
+    - Preview canvas (hidden until generated)
+    - Crop overlay (auto-opens after upload):
+        - <canvas id=cropCanvas> painted with working bitmap
+        - Dim overlay with CSS mask cutout showing the crop area
+        - Crop rect div with 4 corner drag handles
+        - Dashed "Eye line" guide at preset's targetFromBottomRatio
+        - Hint text with "Reset to auto" link
+    - Photo metadata (px × px · mm × mm @ DPI · KB)
+    - Download row (hidden until generated):
+        Download photo (JPG)  |  Download 4×6 print sheet (PDF)
+        Adjust crop & regenerate link
+passport-photo.js (ES module, main thread):
+  CRITICAL: face detection and background segmentation both run here
+  (not in worker) because MediaPipe owns its own WebGL context.
+  loadVision():
+    - Dynamic import of vision_bundle.mjs from cdn.jsdelivr.net/@mediapipe/tasks-vision@0.10.14
+    - Falls back to +esm URL if primary fails
+    - FilesetResolver.forVisionTasks(wasm base URL)
+    - Shared by face detector AND segmenter (one import, one fileset)
+  ensureFaceDetector({silent}):
+    - FaceDetector.createFromOptions, model: blaze_face_short_range float16
+    - minDetectionConfidence: 0.3 (generous for passport-style photos)
+    - Caches in state.faceDetector
+    - On failure: sets state.faceModelError and throws
+  detectFaces(bitmap):
+    - Pass 1: detect on downscaled copy (≤ 1024 px)
+    - Pass 2: if 0 found, retry at full working-bitmap resolution
+    - Returns { faces: Array, modelError: string|null }
+    - Each face: { box:{x,y,w,h}, leftEye, rightEye, score }
+  ensureSegmenter({silent}):
+    - ImageSegmenter.createFromOptions, model: selfie_segmenter float16
+    - outputConfidenceMasks: true
+    - Caches in state.segmenter
+  replaceBackground(srcBitmap, bgHex):
+    - Downscale to ≤ 1536 px for segmenter
+    - Call segmenter.segment(), get confidenceMasks[0]
+    - 3×3 box-blur the Float32 mask to suppress edge speckle
+    - Composite at full srcBitmap resolution using bilinear mask sampling
+    - Smoothstep alpha curve (LO=0.30, HI=0.70, cubic Hermite t²(3-2t))
+    - Returns new ImageBitmap with background replaced
+  handleFile(file):
+    - Validate size (≤ 25 MB)
+    - decodeAnyImage: createImageBitmap with imageOrientation:"from-image",
+      HEIC fallback via heic2any
+    - applyExifOrientation shim (for non-standard decoders)
+    - downscaleBitmap to WORKING_MAX_DIM_PX = 2000
+    - detectFaces → state.faces + state.faceModelError
+    - Set appropriate status message
+    - openCropOverlay() automatically
+  runPipeline():
+    - Read live crop rect from state.crop.rect (user's current view IS the crop)
+    - If removeBackground: call replaceBackground(); surface model error if failed
+    - Clone bitmap, postMessage to worker (transferable)
+    - On result: displayResult()
+  Crop overlay (openCropOverlay / closeCropOverlay):
+    - Opens automatically after upload
+    - Closes automatically when result is ready (show preview instead)
+    - "Adjust crop & regenerate" re-opens with last rect preserved
+    - Crop rect initialised from autoCropRectForUI (mirrors worker crop calc)
+    - Pointer drag: move + aspect-locked resize via 4 corner handles
+    - Arrow-key nudge (1 px normal, 10 px with Shift)
+    - applyRectToDom: positions rect + updates SVG mask + eye-line guide
+    - onCropWindowResize: repaints canvas + repositions overlay
+  buildPrintSheetPdf():
+    - Uses jsPDF (UMD, window.jspdf.jsPDF)
+    - Fits copies of the passport photo on a 4×6 inch sheet
+    - Calculates cols/rows from sheet dimensions and photo size
+    - Draws cut-line rects; footer text with preset info
+passport-photo-worker.js (module worker):
+  - Receives already-composited bitmap (bg replaced on main thread)
+  - safeBitmapToCanvas → OffscreenCanvas (defensive copy)
+  - Crop: priority = user cropOverride > face auto-crop > centre crop
+  - autoCropRectFromFace: headPx = box.h * 1.55; photoH = headPx / head.targetRatio
+  - Render exact targetWPx × targetHPx canvas at 300 DPI
+  - encodeToTargetSize:
+      Default target = preset.preferredKB (hits middle of allowed band)
+      Binary search JPEG quality (9 iterations)
+      If still < minKB: retry quality 1.0
+      If still < minKB: APP15 padding (padJpegToMinSize) — JPEG marker
+        that every decoder ignores, used to satisfy strict minimum-size portals
+  - setJpegDpi: patch or insert JFIF APP0 with DPI=300
+  - Build small preview PNG (≤ 600 px) for fast display
+  - Return { jpegBuffer, previewBuffer, widthPx, heightPx, dpi, sizeBytes }
+passport-photo-sw.js:
+  - Cache name: passport-photo-models-v2
+  - Cache-first for cdn.jsdelivr.net and storage.googleapis.com
+  - Path hints: @mediapipe/tasks-vision, blaze_face_short_range,
+    selfie_segmenter, .tflite, .wasm
+  - On activate: delete caches that don't match current version
+Compliance checks (rendered after generation):
+  - File size vs preset min/max (pass/warn/fail)
+  - Face count (1=pass, 0=warn with faceModelError context, 2+=fail)
+  - Face confidence (≥ 0.85=pass, lower=warn)
+  - Background replaced (pass/fail with actual error if model failed)
+  - Output dimensions @ DPI (always pass)
+Tips & limitations section (below the tool card):
+  - Two-column "Use / Avoid" table with ✓/✗ icons
+  - 9-item "Limitations" list with amber alert icons covering:
+    quality not graded, rules not enforced, segmentation approximate,
+    axis-aligned crop, alignment can miss, no ICC profiles,
+    first-load needs internet, low-RAM devices may struggle,
+    compliance checks are necessary but not sufficient
+6 — Recreating with Claude's extended thinking
+When you open a new conversation with the claude-sonnet-4-5 (or whichever sonnet-thinking variant you have access to) model, use this meta-prompt first, then paste each numbered prompt above one at a time:
+
+I am rebuilding a suite of browser-only image and data tools from scratch.
+All tools run entirely on the client — no backend, no upload, no signup.
+The stack is: vanilla HTML5, ES modules, Web Workers, Canvas API,
+WebAssembly (via CDN-loaded libraries), and CSS custom properties.
+Ground rules for every file you write:
+  1. No build step, no bundler — all files run directly from a local HTTP server.
+  2. Use ES module syntax (import/export, type="module") except for UMD
+     libraries loaded via <script src=…> tags.
+  3. All CDN libraries are loaded from unpkg.com or cdn.jsdelivr.net.
+     Pin exact versions. No integrity hashes on CDN-fetched ML models
+     (they are binary and too large to hash reliably in HTML).
+  4. No inline event handlers (onclick=…). Wire all events in JS.
+  5. Accessibility: every interactive element has an accessible name.
+     Use aria-live="polite" on status regions. Keyboard navigable.
+  6. Responsive: works at 320 px width. CSS Grid / Flexbox, no float layout.
+  7. Dark theme throughout (see styles in Prompt 0).
+  8. Write complete, production-ready files — no TODO comments,
+     no placeholder functions, no abbreviated sections.
+I will give you one prompt per tool. Think through the architecture
+carefully before writing code. For each file, write it in full.
+Then paste prompts 0 → 1 → 2 → 3 → 4 → 5 in order, waiting for each to complete before sending the next. Prompt 5 (passport photo) is the most complex — give the model extra budget to think through the MediaPipe integration, worker message protocol, and the JPEG padding approach before it starts writing.

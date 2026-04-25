@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Convert any image to WebP</title>
+  <meta name="description" content="Convert any image format to WebP using the same interface as the resize tool.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="image-resize.css">
+
+  <!-- PWA -->
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#1e293b">
+  <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Image Tools">
+</head>
+
+<body class="page-resize">
+  <header class="resize-hero">
+    <div class="resize-hero-inner">
+      <span class="resize-eyebrow">Local &amp; private</span>
+      <h1>Convert any image to WebP</h1>
+      <p class="resize-lead">Drop an image, set the target size if required, and download - everything runs in your browser.</p>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <div class="card">
+      <div class="resize-layout">
+        <div class="resize-controls">
+          <p class="resize-panel-title">Upload</p>
+          <div id="drop" class="drop-zone" tabindex="0" role="button"
+            aria-label="Drag and drop an image, or activate to choose a file">
+            <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <strong>Drop your image here</strong>
+            <p class="drop-hint">or click to browse · JPG, PNG, WebP, HEIC</p>
+          </div>
+
+          <input type="file" id="fileInput" class="visually-hidden" accept="image/*,.heic,.heif"
+            aria-label="Choose image file">
+
+          <p class="resize-intro">Tune the output to match what job sites, visa forms, and portals ask for—without uploading your file to a server.</p>
+
+          <div class="file-row">
+            <label for="fileInput">File</label>
+            <span id="fileNameDisplay" class="file-name">No file selected</span>
+          </div>
+
+          <label for="target">Target size (KB)</label>
+          <input type="number" id="target" value="50" min="1" inputmode="numeric">
+          <div id="kbPresets" class="kb-presets" role="group" aria-label="Quick target sizes in kilobytes">
+            <button type="button" class="kb-preset" data-kb="50">50 KB</button>
+            <button type="button" class="kb-preset" data-kb="100">100 KB</button>
+            <button type="button" class="kb-preset" data-kb="200">200 KB</button>
+            <button type="button" class="kb-preset" data-kb="500">500 KB</button>
+          </div>
+
+          <label for="format">Output format</label>
+          <select id="format" class="hidden">
+            <option value="image/webp" selected>WebP</option>
+          </select>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="exactMode">
+            Exact size mode (stricter file-size matching)
+          </label>
+
+          <p class="hint">Turn on exact mode if a portal still rejects the upload.</p>
+
+          <div class="resize-actions">
+            <button type="button" id="resizeBtn" class="resize-primary" onclick="processImage()">Convert Image</button>
+            <a id="download" class="button-secondary" download="resized.webp">Download</a>
+          </div>
+
+          <div id="loader" class="loader" aria-live="polite">
+            <span class="loader-spinner" aria-hidden="true"></span>
+            <span>Processing…</span>
+          </div>
+          <p id="status" data-tone="info" aria-live="polite"></p>
+          <p id="fileInfo" class="file-info file-meta"></p>
+        </div>
+
+        <div class="resize-preview-col">
+          <p class="resize-panel-title">Preview</p>
+          <div class="preview-wrap">
+            <img id="preview" class="preview hidden" alt="Image preview after resize">
+            <div class="preview-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+              <div>Your preview appears here after you choose an image.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="card how-faq">
+      <h2>How to use</h2>
+      <ol>
+        <li>Add an image by drag-and-drop or the file picker.</li>
+        <li>Set the target size in KB (try the quick presets).</li>
+        <li>Enable exact mode if the site is picky about bytes.</li>
+        <li>Resize, then download the result.</li>
+      </ol>
+
+      <h2>FAQs</h2>
+      <p><strong>Can I hit an exact file size?</strong><br>Use Exact size mode for the closest match; strict portals can still vary slightly by format.</p>
+      <p><strong>Will quality go down?</strong><br>Yes, compression and scaling trade quality to stay under your KB limit.</p>
+      <p><strong>Is my image uploaded anywhere?</strong><br>No. Processing stays in your browser on this device.</p>
+    </div>
+
+    <div class="card other-tools">
+      <h3>Other tools</h3>
+      <div class="link-grid">
+        <a href="convert-heic-to-jpg.html">Convert HEIC to JPG</a>
+        <a href="convert-jpg-to-png.html">Convert JPG to PNG</a>
+        <a href="convert-png-to-jpg.html">Convert PNG to JPG</a>
+        <a href="format-convert.html">XML, JSON &amp; XSD converter</a>
+        <a href="convert-to-pdf.html">Images &amp; documents to PDF</a>
+        <a href="convert-to-pdf.html">Convert JPG to PDF</a>
+        <a href="create-passport-photo.html">Passport photo maker (US &amp; India)</a>
+        <a href="resize-image-for-passport.html">Resize for Passport</a>
+        <a href="resize-image-for-visa.html">Resize for Visa</a>
+        <a href="resize-image-for-job-applications.html">Resize for Job Applications</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="page-footer">
+    <a href="pages/privacy.html">Privacy</a>
+    <a href="pages/about.html">About</a>
+    <a href="pages/contact.html">Contact</a>
+  </footer>
+
+  <script>window.DEFAULT_SIZE = 200;</script>
+  <script src="https://unpkg.com/heic2any@0.0.3/dist/heic2any.min.js"></script>
+  <script src="app.js"></script>
+  <script defer src="pwa-register.js"></script>
+</body>
+
+</html>

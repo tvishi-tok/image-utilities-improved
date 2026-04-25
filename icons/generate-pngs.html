@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Icon PNG Generator</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0c0f14; color: #e8edf5; padding: 24px; max-width: 720px; margin: 0 auto; }
+    h1 { color: #38bdf8; }
+    button { background: #38bdf8; color: #0c0f14; border: 0; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 8px; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    code { background: #1a2130; padding: 2px 6px; border-radius: 4px; }
+    p, li { line-height: 1.6; }
+    #status { color: #94a3b8; min-height: 1.4em; }
+    #status.ok   { color: #34d399; }
+    #status.err  { color: #f87171; }
+    .file-row { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+    label.pick-label {
+      display: inline-block;
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    label.pick-label:hover { border-color: #38bdf8; color: #38bdf8; }
+    #fileName { color: #94a3b8; font-size: 0.88rem; }
+    .previews { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+    .previews canvas { border: 1px solid #1a2130; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Icon PNG generator</h1>
+  <p>Renders <code>app-icon.svg</code> into the PNG sizes the PWA manifest and browsers need.
+     Click <strong>Generate &amp; download</strong> and the four files save automatically.</p>
+
+  <p>It produces:</p>
+  <ul>
+    <li><code>icon-192.png</code> - Android home-screen / manifest</li>
+    <li><code>icon-512.png</code> - splash screen, large surfaces</li>
+    <li><code>icon-maskable-512.png</code> - Android adaptive icon (10 % safe-zone padding)</li>
+    <li><code>apple-touch-icon-180.png</code> - iOS home-screen icon</li>
+  </ul>
+
+  <!--
+    If the page is served over http:// the SVG is fetched automatically.
+    If opened as file:// the browser blocks fetch(); use the file-picker instead.
+  -->
+  <div class="file-row">
+    <label class="pick-label" for="svgInput">
+      Choose app-icon.svg manually
+    </label>
+    <span id="fileName">or just click Generate (auto-fetches when served over HTTP)</span>
+    <input type="file" id="svgInput" accept=".svg,image/svg+xml" style="display:none">
+  </div>
+
+  <p>
+    <button id="goBtn">Generate &amp; download all 4 icons</button>
+  </p>
+  <p id="status"></p>
+  <div class="previews" id="previews"></div>
+
+  <script>
+    const SVG_URL = "./app-icon.svg";
+    const SIZES = [
+      { name: "icon-192.png",             size: 192, padding: 0    },
+      { name: "icon-512.png",             size: 512, padding: 0    },
+      { name: "icon-maskable-512.png",    size: 512, padding: 0.10 },
+      { name: "apple-touch-icon-180.png", size: 180, padding: 0    },
+    ];
+
+    let pickedSvgText = null;
+
+    // Let the user manually pick the SVG (needed on file://)
+    document.getElementById("svgInput").addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        pickedSvgText = reader.result;
+        document.getElementById("fileName").textContent = file.name + " ✓";
+        document.getElementById("fileName").style.color = "#34d399";
+      };
+      reader.readAsText(file);
+    });
+
+    async function loadSvgText() {
+      // Prefer a manually-picked file (works on file://).
+      if (pickedSvgText) return pickedSvgText;
+      // Attempt fetch - works when served over HTTP/S.
+      try {
+        const resp = await fetch(SVG_URL);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return await resp.text();
+      } catch (err) {
+        throw new Error(
+          "Could not load app-icon.svg automatically. " +
+          "Open this page over a local HTTP server (e.g. npx serve), " +
+          "or pick the file manually using the button above.",
+        );
+      }
+    }
+
+    function setStatus(msg, cls = "") {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.className = cls;
+    }
+
+    function delay(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
+
+    document.getElementById("goBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("goBtn");
+      btn.disabled = true;
+      document.getElementById("previews").innerHTML = "";
+      setStatus("Loading SVG…");
+
+      try {
+        const svgText = await loadSvgText();
+        const svgBlob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+        const svgUrl  = URL.createObjectURL(svgBlob);
+
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload  = resolve;
+          img.onerror = () => reject(new Error("SVG failed to render as an image."));
+          img.src = svgUrl;
+        });
+
+        const previews = document.getElementById("previews");
+
+        for (const { name, size, padding } of SIZES) {
+          setStatus(`Rendering ${name}…`);
+
+          const cv = document.createElement("canvas");
+          cv.width  = size;
+          cv.height = size;
+          cv.title  = name;
+          const ctx = cv.getContext("2d");
+
+          // Dark background matches the site theme.
+          ctx.fillStyle = "#0f172a";
+          ctx.fillRect(0, 0, size, size);
+
+          const inner = Math.round(size * (1 - padding * 2));
+          const off   = Math.round((size - inner) / 2);
+          ctx.drawImage(img, off, off, inner, inner);
+
+          // Show a small preview (cap at 96 px so they fit in one row).
+          const displaySize = Math.min(size, 96);
+          const prev = document.createElement("canvas");
+          prev.width  = displaySize;
+          prev.height = displaySize;
+          prev.title  = name;
+          prev.style.imageRendering = "pixelated";
+          prev.getContext("2d").drawImage(cv, 0, 0, displaySize, displaySize);
+          previews.appendChild(prev);
+
+          // Trigger download.
+          const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+          const a = document.createElement("a");
+          a.href     = URL.createObjectURL(blob);
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          // Small pause so the browser doesn't throttle rapid-fire downloads.
+          await delay(250);
+          URL.revokeObjectURL(a.href);
+        }
+
+        URL.revokeObjectURL(svgUrl);
+        setStatus("Done - 4 PNGs downloaded. Move them into the icons/ folder.", "ok");
+      } catch (err) {
+        setStatus(err.message, "err");
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XML · JSON · XSD Converter | Image Utility Tools</title>
+  <meta name="description"
+    content="Convert XML to JSON, JSON to XML, and generate sample XML from an XSD schema in your browser.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="image-resize.css">
+
+  <!-- PWA -->
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#1e293b">
+  <link rel="icon" href="icons/format-convert.png" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="XML / JSON">
+</head>
+
+<body class="page-resize page-format">
+  <header class="resize-hero">
+    <div class="resize-hero-inner">
+      <span class="resize-eyebrow">Runs in your browser · no upload</span>
+      <h1>XML, JSON &amp; XSD tools</h1>
+      <p class="resize-lead">Convert XML ↔ JSON, or build a starter XML document from an XSD schema — including XBRL,
+        ISO 20022 &amp; derivatives report schemas. Drag files straight onto the editors.</p>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="card format-card">
+
+      <!-- Mode tabs -->
+      <div class="format-mode-bar" role="tablist" aria-label="Conversion mode">
+        <button type="button" class="format-mode is-active" data-mode="xml2json" role="tab" aria-selected="true">
+          XML → JSON
+        </button>
+        <button type="button" class="format-mode" data-mode="json2xml" role="tab" aria-selected="false">
+          JSON → XML
+        </button>
+        <button type="button" class="format-mode" data-mode="xsd2xml" role="tab" aria-selected="false">
+          XSD →  XML
+        </button>
+      </div>
+
+      <!-- Panels: editors + sidebar -->
+      <div class="format-panels">
+
+        <!-- Editors -->
+        <div class="format-editors">
+          <div class="format-editor-grid">
+            <div class="format-editor-col">
+              <label for="sourceText" id="sourceLabel" class="resize-panel-title">XML input</label>
+              <div class="format-code-shell" id="sourceShell">
+                <div class="format-code-clip" aria-hidden="true">
+                  <pre class="format-code-highlights"><code id="sourceHighlight"></code></pre>
+                </div>
+                <textarea id="sourceText" class="format-textarea format-textarea--layer" rows="18"
+                  spellcheck="false" aria-label="Source input"
+                  placeholder="Paste content or drag a file here…"></textarea>
+              </div>
+              <p id="sourceStats" class="format-stats" aria-live="polite"></p>
+            </div>
+            <div class="format-editor-col">
+              <label for="resultText" id="resultLabel" class="resize-panel-title">JSON output</label>
+              <div class="format-code-shell format-code-shell--out" id="resultShell">
+                <div class="format-code-clip" aria-hidden="true">
+                  <pre class="format-code-highlights"><code id="resultHighlight"></code></pre>
+                </div>
+                <textarea id="resultText" class="format-textarea format-textarea--layer format-textarea--out" rows="18"
+                  readonly spellcheck="false" aria-label="Conversion result"
+                  placeholder="Result appears here…"></textarea>
+              </div>
+              <p id="resultStats" class="format-stats" aria-live="polite"></p>
+            </div>
+          </div>
+
+          <!-- Action bar -->
+          <div class="format-actions">
+            <button type="button" id="btnConvert" class="resize-primary format-btn-convert"
+              title="Convert (Ctrl/Cmd + Enter)">Convert</button>
+            <button type="button" id="btnFormat"   class="button-secondary format-btn-secondary"
+              title="Pretty-print source">Format</button>
+            <button type="button" id="btnSwap"     class="button-secondary format-btn-secondary"
+              title="Swap source and result">⇅ Swap</button>
+            <button type="button" id="btnCopy"     class="button-secondary format-btn-secondary">Copy result</button>
+            <button type="button" id="btnDownload" class="button-secondary format-btn-secondary">Download</button>
+            <button type="button" id="btnClear"    class="button-secondary format-btn-secondary">Clear</button>
+          </div>
+          <p id="formatStatus" class="format-status" data-tone="info" aria-live="polite"></p>
+        </div>
+
+        <!-- Options sidebar -->
+        <aside class="format-options" aria-label="Conversion options">
+
+          <!-- XML → JSON options -->
+          <div class="format-opts" data-for="xml2json">
+            <p class="format-opts-title">XML → JSON options</p>
+
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optIgnoreAttrs"> Ignore attributes
+            </label>
+            <label for="optAttrPrefix">Attribute key prefix</label>
+            <input type="text" id="optAttrPrefix" value="@_" maxlength="8" class="format-input-sm"
+              title="Prefix prepended to XML attribute names in JSON (default @_)">
+            <p class="hint">Match this prefix in JSON → XML for clean round-trips.</p>
+
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optTrim" checked> Trim text-node whitespace
+            </label>
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optParseValues" checked> Parse numeric &amp; boolean tag values
+            </label>
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optParseAttrValues" checked> Parse numeric &amp; boolean attributes
+            </label>
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optRemoveNs"> Strip namespace prefixes from keys
+            </label>
+
+            <label for="optJsonIndent">JSON indent</label>
+            <select id="optJsonIndent">
+              <option value="2" selected>2 spaces</option>
+              <option value="4">4 spaces</option>
+              <option value="1">1 space (compact-ish)</option>
+            </select>
+          </div>
+
+          <!-- JSON → XML options -->
+          <div class="format-opts" data-for="json2xml" hidden>
+            <p class="format-opts-title">JSON → XML options</p>
+
+            <label for="optJ2xRootWrap">Root wrapper element <small>(optional)</small></label>
+            <input type="text" id="optJ2xRootWrap" class="format-input-sm"
+              placeholder="e.g. root" autocomplete="off">
+            <p class="hint">If your JSON is an object or array without a single key, wrap it.
+              <code>{"a":1}</code> + wrapper <code>doc</code> → <code>&lt;doc&gt;…&lt;/doc&gt;</code>.</p>
+
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optJ2xIgnoreAttrs"> Ignore attribute markers when building
+            </label>
+            <label for="optJ2xAttrPrefix">Attribute key prefix in JSON</label>
+            <input type="text" id="optJ2xAttrPrefix" value="@_" maxlength="8" class="format-input-sm">
+
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optJ2xFormat" checked> Pretty-print output
+            </label>
+            <label for="optXmlIndentChar">Indent character</label>
+            <select id="optXmlIndentChar">
+              <option value="spaces" selected>Spaces</option>
+              <option value="tab">Tab</option>
+            </select>
+            <label for="optXmlIndentSize">Indent size</label>
+            <select id="optXmlIndentSize">
+              <option value="2" selected>2</option>
+              <option value="4">4</option>
+            </select>
+
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optJ2xSuppressEmpty"> Suppress empty nodes (<code>&lt;x/&gt;</code>)
+            </label>
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optJ2xXmlDecl"> Add XML declaration
+            </label>
+          </div>
+
+          <!-- XSD → sample XML options -->
+          <div class="format-opts" data-for="xsd2xml" hidden>
+            <p class="format-opts-title">XSD → sample XML options</p>
+            <p class="hint">Handles sequences, choices, attribute groups, type inheritance, enumerations, and common
+              external types (XBRL, ISO 20022). <code>xs:import</code> is not fetched.</p>
+
+            <!-- Generate all toggle -->
+            <label class="checkbox-label format-checkbox xsd-all-toggle">
+              <input type="checkbox" id="optXsdAllRoots">
+              <span>
+                Generate <strong>all global elements</strong>
+                <span id="optXsdRootCount" class="format-root-count"></span>
+              </span>
+            </label>
+            <p class="hint">
+              Wraps every non-abstract global element in one document so you can see the
+              complete schema in one go. Uncheck to pick a specific root instead.
+            </p>
+
+            <!-- Single-root row (hidden when "all" is checked) -->
+            <div id="xsdRootRow">
+              <label for="optXsdRoot">Root element</label>
+              <select id="optXsdRoot" disabled>
+                <option value="">— Paste XSD first —</option>
+              </select>
+            </div>
+
+            <!-- Wrapper / max-els rows (hidden when "all" is NOT checked) -->
+            <div id="xsdWrapperRow" hidden>
+              <label for="optXsdWrapper">Wrapper tag name</label>
+              <input type="text" id="optXsdWrapper" value="XsdSample" class="format-input-sm"
+                maxlength="64" autocomplete="off">
+            </div>
+            <div id="xsdMaxElsRow" hidden>
+              <label for="optXsdMaxEls">Max elements to emit</label>
+              <input type="number" id="optXsdMaxEls" value="200" min="1" max="2000" class="format-input-sm">
+              <p class="hint">Schemas with many global elements (e.g. XBRL) can be large — set a cap.</p>
+            </div>
+
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optXsdOptional" checked>
+              Include optional elements (<code>minOccurs="0"</code>)
+            </label>
+
+            <label for="optXsdOccurrences">Repeats per <code>maxOccurs &gt; 1</code> element</label>
+            <input type="number" id="optXsdOccurrences" value="1" min="1" max="5" class="format-input-sm">
+
+            <label for="optXsdMaxDepth">Max nesting depth</label>
+            <input type="number" id="optXsdMaxDepth" value="20" min="2" max="50" class="format-input-sm">
+
+            <label for="optXsdIndent">Indent (spaces)</label>
+            <input type="number" id="optXsdIndent" value="2" min="0" max="8" class="format-input-sm">
+
+            <label class="checkbox-label format-checkbox">
+              <input type="checkbox" id="optXsdDecl"> Add XML declaration
+            </label>
+          </div>
+
+        </aside>
+      </div><!-- /format-panels -->
+    </div><!-- /card -->
+
+    <div class="card how-faq">
+      <h2>How to use</h2>
+      <ol>
+        <li>Choose a mode: <strong>XML → JSON</strong>, <strong>JSON → XML</strong>, or
+          <strong>XSD → sample XML</strong>.</li>
+        <li>Paste text or <strong>drag a file</strong> onto either editor. Files are read as UTF-8 text.</li>
+        <li>Adjust options in the sidebar, then click <strong>Convert</strong> (or press
+          <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>).</li>
+        <li>Use <strong>Format</strong> to pretty-print the source, <strong>⇅ Swap</strong> to exchange panels
+          (useful for chaining conversions), and <strong>Download</strong> or <strong>Copy</strong> the result.</li>
+      </ol>
+
+      <h2>Notes</h2>
+      <p><strong>XML ↔ JSON round-trips</strong><br>Use the same attribute prefix (default <code>@_</code>) in both
+        directions. Arrays with one item may collapse — check the "isArray" option if you need strict control (future
+        option).</p>
+      <p><strong>XSD → sample XML</strong><br>Handles: <code>xs:sequence</code>, <code>xs:all</code>,
+        <code>xs:choice</code>, <code>xs:group</code>, <code>xs:attributeGroup</code>, <code>xs:simpleContent</code>,
+        <code>xs:complexContent</code> (extension &amp; restriction), abstract elements, enumerations, type unions and
+        lists, and external type hints for XBRL, ISO 20022, FpML and derivatives schemas. <code>xs:import</code> /
+        <code>xs:include</code> are not fetched.</p>
+      <p><strong>Privacy</strong><br>All processing runs in your browser. The fast-xml-parser library loads from
+        esm.sh; no document content is sent anywhere.</p>
+    </div>
+
+    <div class="card other-tools">
+      <h3>Other tools</h3>
+      <div class="link-grid">
+        <a href="convert-to-pdf.html">Images &amp; documents to PDF</a>
+        <a href="image-resize.html">Resize image by file size</a>
+        <a href="create-passport-photo.html">Passport photo maker (US &amp; India)</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="page-footer">
+    <a href="pages/privacy.html">Privacy</a>
+    <a href="pages/about.html">About</a>
+    <a href="pages/contact.html">Contact</a>
+  </footer>
+
+  <script type="module" src="format-convert.js"></script>
+  <script defer src="pwa-register.js"></script>
+</body>
+
+</html>

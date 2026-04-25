@@ -1,0 +1,21 @@
+<svg width="128" height="128" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#1e293b"></rect>
+
+  <!-- Image frame -->
+  <rect x="14" y="14" width="36" height="28" rx="6" stroke="#38bdf8" stroke-width="2"></rect>
+
+  <!-- Mountain -->
+  <path d="M18 34L26 26L34 34L42 22L46 34" stroke="#86efac" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+
+  <!-- Sun -->
+  <circle cx="38" cy="20" r="3" fill="#fcd34d"></circle>
+
+  <!-- Compression arrows (inward) -->
+  <path d="M24 46L20 42M20 42H24M20 42V46" stroke="#c4b5fd" stroke-width="2" stroke-linecap="round"></path>
+  <path d="M40 46L44 42M44 42H40M44 42V46" stroke="#c4b5fd" stroke-width="2" stroke-linecap="round"></path>
+
+  <!-- Resize arrows (diagonal) -->
+  <path d="M22 48L16 54M16 54H22M16 54V48" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"></path>
+  <path d="M42 48L48 54M48 54H42M48 54V48" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"></path>
+</svg>

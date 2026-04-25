@@ -1,0 +1,60 @@
+{
+  "name": "Image Utility Tools",
+  "short_name": "ImageTools",
+  "description": "Resize, compress, convert images, build PDFs, and create passport photos — all entirely in your browser. No upload, no signup.",
+  "id": "/image-tools/",
+  "start_url": "./image-resize.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#1e293b",
+  "theme_color": "#1e293b",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["utilities", "productivity", "photo"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icons/app-icon.svg",              "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192.png",              "sizes": "192x192", "type": "image/png",     "purpose": "any" },
+    { "src": "icons/icon-512.png",              "sizes": "512x512", "type": "image/png",     "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png",     "sizes": "512x512", "type": "image/png",     "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Passport photo maker",
+      "short_name": "Passport",
+      "description": "Create a US or India passport photo with auto face alignment.",
+      "url": "./passport-photo.html",
+      "icons": [{ "src": "icons/app-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Resize image by file size",
+      "short_name": "Resize",
+      "description": "Resize an image to fit an exact KB target.",
+      "url": "./image-resize.html",
+      "icons": [{ "src": "icons/app-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Compress image",
+      "short_name": "Compress",
+      "description": "Reduce file size of JPG, PNG or WebP photos.",
+      "url": "./compress-image.html",
+      "icons": [{ "src": "icons/app-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Images & documents to PDF",
+      "short_name": "To PDF",
+      "description": "Combine images and text into a single PDF.",
+      "url": "./convert-to-pdf.html",
+      "icons": [{ "src": "icons/app-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "XML / JSON / XSD converter",
+      "short_name": "XML/JSON",
+      "description": "Convert between XML and JSON, generate samples from XSD.",
+      "url": "./format-convert.html",
+      "icons": [{ "src": "icons/app-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}

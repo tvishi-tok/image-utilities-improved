@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passport Photo Maker — US & India | Image Utility Tools</title>
+    <meta name="description"
+        content="Create a compliant US or India passport photo in your browser. Auto face detection, background removal, exact mm sizing at 300 DPI. No upload, no signup.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="image-resize.css">
+    <link rel="stylesheet" href="passport-photo.css"> <!-- PWA -->
+    <link rel="manifest" href="site.webmanifest">
+    <meta name="theme-color" content="#1e293b">
+    <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Passport Photo">
+</head>
+
+<body class="page-resize page-passport">
+    <header class="resize-hero">
+        <div class="resize-hero-inner"> <span class="resize-eyebrow">Runs entirely on your device · no upload</span>
+            <h1>Passport photo maker</h1>
+            <p class="resize-lead"> Auto-crop and align a passport photo for the <strong>US</strong> or
+                <strong>India</strong>, with face detection, background replacement, and exact-millimetre sizing at 300
+                DPI.
+            </p>
+        </div>
+    </header>
+    <div class="container">
+        <div class="card"> <!-- Preset tabs -->
+            <div class="format-mode-bar passport-preset-bar" role="tablist" aria-label="Photo specification"> <button
+                    type="button" class="format-mode is-active" data-preset="us_passport" role="tab"
+                    aria-selected="true"> US Passport </button> <button type="button" class="format-mode"
+                    data-preset="india_passport" role="tab" aria-selected="false"> India Passport </button> <button
+                    type="button" class="format-mode" data-preset="india_visa" role="tab" aria-selected="false"> India
+                    Visa / OCI </button> </div>
+            <p id="presetSummary" class="passport-preset-summary"></p>
+            <div class="resize-layout"> <!-- Left: controls -->
+                <div class="resize-controls">
+                    <p class="resize-panel-title">Upload</p>
+                    <div id="drop" class="drop-zone" tabindex="0" role="button"
+                        aria-label="Drag and drop a photo, or activate to choose a file"> <svg class="drop-icon"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg> <strong>Drop your photo here</strong>
+                        <p class="drop-hint">or click to browse · JPG, PNG, WebP, HEIC · max 25 MB</p>
+                    </div> <input type="file" id="fileInput" class="visually-hidden" accept="image/*,.heic,.heif"
+                        aria-label="Choose photo file">
+                    <div class="file-row"> <label for="fileInput">File</label> <span id="fileNameDisplay"
+                            class="file-name">No file selected</span> </div>
+                    <p class="resize-panel-title passport-section-title">Options</p> <label class="checkbox-label">
+                        <input type="checkbox" id="optBgRemove" checked> Replace background </label>
+                    <p class="hint">Removes the original background and replaces it with the required colour. Uses
+                        MediaPipe selfie segmentation (~1 MB model, cached after first load).</p> <label
+                        for="bgColor">Background colour</label>
+                    <div class="passport-color-row"> <input type="color" id="bgColor" value="#FFFFFF"
+                            aria-label="Background colour"> <select id="bgColorPreset"
+                            aria-label="Background colour preset">
+                            <option value="#FFFFFF" selected>Plain white (recommended)</option>
+                            <option value="#F4F4F2">Off-white</option>
+                            <option value="#EAEAEA">Light grey</option>
+                            <option value="#D8E6F0">Pale blue</option>
+                        </select> </div> <label class="checkbox-label"> <input type="checkbox" id="optAutoCrop" checked>
+                        Auto-crop using face detection </label>
+                    <p class="hint">Aligns eyes horizontally and sizes the head to the official ratio. Drag the crop box
+                        on the right to fine-tune.</p> <label for="targetSizeKb">Target file size (KB)
+                        <small>optional</small></label> <input type="number" id="targetSizeKb" min="10" max="10240"
+                        placeholder="auto" inputmode="numeric">
+                    <p class="hint passport-size-hint" id="sizeHint"></p>
+                    <div class="resize-actions"> <button type="button" id="processBtn" class="resize-primary"
+                            disabled>Generate photo</button> <button type="button" id="resetBtn"
+                            class="button-secondary">Start over</button> </div>
+                    <div id="loader" class="loader" aria-live="polite"> <span class="loader-spinner"
+                            aria-hidden="true"></span> <span id="loaderText">Working…</span> </div>
+                    <div id="progress" class="passport-progress" hidden>
+                        <div class="passport-progress-bar"><span id="progressFill"></span></div>
+                        <p class="passport-progress-label" id="progressLabel"></p>
+                    </div>
+                    <p id="status" data-tone="info" aria-live="polite"></p>
+                    <ul id="checks" class="passport-checks" aria-live="polite" hidden></ul>
+                </div> <!-- Right: preview + downloads -->
+                <div class="resize-preview-col">
+                    <p class="resize-panel-title">Preview</p>
+                    <div class="preview-wrap passport-preview-wrap"> <canvas id="previewCanvas"
+                            class="passport-preview-canvas hidden" aria-label="Passport photo preview"></canvas>
+                        <!-- Manual crop stage (hidden by default; shown when adjusting) -->
+                        <div id="cropStage" class="passport-crop-stage" aria-label="Manual crop area"> <canvas
+                                id="cropCanvas" class="passport-crop-canvas"></canvas>
+                            <div class="passport-crop-overlay">
+                                <div id="cropDim" class="passport-crop-dim"></div>
+                                <div id="cropGuideEye" class="passport-crop-guide" style="top:50%"><span
+                                        class="passport-crop-guide-label">Eye line</span></div>
+                                <div id="cropRect" class="passport-crop-rect" tabindex="0" role="group"
+                                    aria-label="Crop rectangle (drag to move, use handles to resize)"> <span
+                                        class="passport-crop-handle tl" data-handle="tl" aria-hidden="true"></span>
+                                    <span class="passport-crop-handle tr" data-handle="tr" aria-hidden="true"></span>
+                                    <span class="passport-crop-handle bl" data-handle="bl" aria-hidden="true"></span>
+                                    <span class="passport-crop-handle br" data-handle="br" aria-hidden="true"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preview-placeholder" id="previewPlaceholder"> <svg viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="12" cy="10" r="3" />
+                                <path d="M6 21c0-3 2.5-5 6-5s6 2 6 5" />
+                            </svg>
+                            <div>Your aligned passport photo appears here.</div>
+                        </div>
+                    </div>
+                    <p id="cropHint" class="passport-crop-hint" hidden> Drag inside the rectangle to move it · drag the
+                        corners to resize · the dashed line shows the official eye position. <button type="button"
+                            id="resetCropBtn" class="passport-crop-link">Reset to auto</button> </p>
+                    <p id="photoMeta" class="file-info file-meta passport-meta"></p>
+                    <div class="resize-actions passport-download-actions" id="downloadActions" hidden> <a
+                            id="downloadJpg" class="button-secondary" download="passport.jpg">Download photo (JPG)</a>
+                        <button type="button" id="downloadSheet" class="button-secondary">Download 4×6 print sheet
+                            (PDF)</button> <button type="button" id="reopenCropBtn"
+                            class="passport-crop-link passport-crop-link-block">Adjust crop &amp; regenerate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card how-faq">
+            <h2>How to use</h2>
+            <ol>
+                <li>Pick the document type — <strong>US Passport</strong>, <strong>India Passport</strong>, or
+                    <strong>India Visa / OCI</strong>.
+                </li>
+                <li>Drop a clear, front-facing photo. Face detection auto-positions the crop box on the right with eyes
+                    aligned and the head at the official ratio.</li>
+                <li>Drag the crop box if you want to fine-tune. Choose the background colour, toggle background
+                    replacement, then click <strong>Generate photo</strong>.</li>
+                <li>Review the compliance checks, then download the photo or a 4×6 inch print sheet. To re-tune the
+                    crop, click <strong>Adjust crop &amp; regenerate</strong>.</li>
+            </ol>
+            <h2>Compliance notes</h2>
+            <p><strong>US Passport</strong> (travel.state.gov)<br> 2×2 inch (51×51 mm), head 1–1⅜ in tall, eyes 1⅛–1⅜ in
+                from bottom, plain white background, no glasses, taken within last 6 months.</p>
+            <p><strong>India Passport</strong> (Passport Seva)<br> 35×45 mm, head 25–35 mm tall, eyes ~28–35 mm from
+                bottom, plain white background, neutral expression, sharp focus.</p>
+            <p><strong>India Visa / OCI</strong><br> Square 2×2 inch, head 50–69% of photo height, plain light
+                background, no patterns.</p>
+            <h2>Tips for the best results</h2>
+            <p>The auto-crop and background-replacement models work best on photos that look like they were taken for a
+                passport in the first place. Here's what works and what doesn't:</p>
+            <div class="passport-tips">
+                <div class="passport-tip-col passport-tip-do">
+                    <h3>Use a photo that has</h3>
+                    <ul>
+                        <li>One person, looking straight at the camera</li>
+                        <li>The whole head and the top of the shoulders visible</li>
+                        <li>Even, diffuse lighting on the face - no hard side-shadows</li>
+                        <li>A reasonably plain background (any colour - the tool replaces it)</li>
+                        <li>Sharp focus on the face; eyes open, mouth closed</li>
+                        <li>No filter or beauty mode applied by the camera app</li>
+                        <li>Natural expression — slight smile is OK; teeth not showing</li>
+                        <li>Resolution of at least 600 × 600 px (most modern phones are far above this)</li>
+                    </ul>
+                </div>
+                <div class="passport-tip-col passport-tip-dont">
+                    <h3>Avoid photos with</h3>
+                    <ul>
+                        <li>Profile, three-quarter, or tilted-head poses - face detection needs near-frontal</li>
+                        <li>Glasses (US passport rule), sunglasses, or heavy lens reflections</li>
+                        <li>Hats or hoods (religious head coverings are OK if the face is fully visible)</li>
+                        <li>Hair covering the eyes, eyebrows, or one side of the face</li>
+                        <li>Hands, microphones, or other objects close to the face</li>
+                        <li>Strong shadows on the face or behind the subject</li>
+                        <li>Busy, patterned, or low-contrast backgrounds — these confuse the segmenter and may produce
+                            noisy edges</li>
+                        <li>Wearing white against a white wall (the segmenter can't tell where you end)</li>
+                        <li>Extreme zoom-in (face touching the frame edges) or extreme zoom-out (face under ~30% of the
+                            image)</li>
+                        <li>Group photos, even cropped — the model can lock onto the wrong face</li>
+                    </ul>
+                </div>
+            </div>
+            <h2>Limitations of this tool</h2>
+            <p>Because everything runs in your browser with no upload, there are some things this tool <em>cannot</em>
+                check or fix. Knowing these up-front will save you a re-take:</p>
+            <ul class="passport-limits">
+                <li><strong>It doesn't grade photo quality.</strong> Blur, motion, glare on glasses, red-eye, harsh
+                    shadows, and over- or under-exposure are not detected. The compliance checks only verify size,
+                    ratio, and file size — not whether the photo itself is acceptable.</li>
+                <li><strong>It doesn't enforce the rules.</strong> No detection of glasses, smile/teeth, head coverings,
+                    both-ears-visible, or whether the photo was taken recently. You're responsible for these.</li>
+                <li><strong>Background segmentation is approximate.</strong> Fine flyaway hair, glasses lenses,
+                    headscarves, and busy backgrounds can produce visible halos or chipped edges. If the result looks
+                    rough, retake with a plainer background and try again.</li>
+                <li><strong>The crop is axis-aligned.</strong> If your head is tilted in the source photo, the eyes will
+                    be tilted in the output. The tool does not auto-rotate to level the eyes — re-shoot upright.</li>
+                <li><strong>Auto-alignment can miss.</strong> The face detector occasionally fails on profiles, distance
+                    shots, or strongly lit/shadowed faces. When it does, drag the crop box on the right manually.</li>
+                <li><strong>No colour-profile management.</strong> Wide-gamut iPhone photos are converted to sRGB;
+                    subtle colour shifts may appear.</li>
+                <li><strong>First load needs the internet.</strong> ~5 MB of models download from public CDNs (jsdelivr,
+                    Google) on first use. Some corporate or school networks block these. Once cached, the tool works
+                    fully offline.</li>
+                <li><strong>Older / low-RAM devices may struggle.</strong> Photos above ~16 MP can hit memory limits on
+                    phones with less than 4 GB RAM. The tool downscales automatically, but very large HEIC files from
+                    new iPhones may still be slow.</li>
+                <li><strong>The compliance checks are necessary but not sufficient.</strong> A "passing" photo here may
+                    still be rejected by the actual passport portal if the lighting, expression, or sharpness don't meet
+                    their reviewer's bar. We aim for the technical specs; final acceptance is up to the issuing
+                    authority.</li>
+            </ul>
+            <h2>FAQs</h2>
+            <p><strong>Is my photo uploaded anywhere?</strong><br> No. The whole pipeline — face detection, background
+                removal, cropping — runs locally in your browser using WebAssembly. Nothing leaves your device.</p>
+            <p><strong>What about the background-removal model?</strong><br> It's downloaded once (~1 MB MediaPipe
+                selfie segmenter) and cached by your browser, then runs entirely offline. You can turn it off in
+                Options.</p>
+            <p><strong>Will this be accepted by the passport office?</strong><br> It produces a photo that meets the
+                published technical specs (size, head ratio, DPI). Acceptance also depends on lighting, expression, and
+                image quality of your original photo. We surface compliance warnings so you can re-shoot if needed.</p>
+            <p><strong>Can I use this on a phone?</strong><br> Yes. Modern Android Chrome and iOS Safari (15+) work;
+                older devices may run out of memory on very large photos — the tool downscales automatically.</p>
+        </div>
+        <div class="card other-tools">
+            <h3>Other tools</h3>
+            <div class="link-grid">
+                <a href="compress-image.html">Compress image</a>
+                <a href="convert-to-pdf.html">Images &amp; documents to PDF</a>
+                <a href="convert-heic-to-jpg.html">Convert HEIC to JPG</a>
+            </div>
+        </div>
+    </div>
+    <footer class="page-footer"> <a href="pages/privacy.html">Privacy</a> <a href="pages/about.html">About</a> <a
+            href="pages/contact.html">Contact</a> </footer>
+    <!-- HEIC fallback decoder (only used when the browser can't decode HEIC natively) -->
+    <script src="https://unpkg.com/heic2any@0.0.3/dist/heic2any.min.js"></script> <!-- jsPDF for print-sheet PDF -->
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script> <!-- App entry (ES module) -->
+    <script type="module" src="passport-photo.js"></script>
+    <!-- PWA service-worker bootstrap (silently no-op when not installable) -->
+    <script defer src="pwa-register.js"></script>
+</body>
+
+</html>
